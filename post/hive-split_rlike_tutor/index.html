@@ -1,0 +1,283 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>YL&#39;s blog</title>
+<meta name="description" content="知易行难" />
+<link rel="shortcut icon" href="https://yanglei-github.github.io//favicon.ico?v=1678521400365">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://yanglei-github.github.io//styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://yanglei-github.github.io/">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://yanglei-github.github.io//images/avatar.png?v=1678521400365" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">YL&#39;s blog</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E5%BA%8F">序</a></li>
+<li><a href="#%E9%97%AE%E9%A2%98">问题</a></li>
+<li><a href="#%E5%88%86%E6%9E%90">分析</a></li>
+<li><a href="#ref">ref</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://yanglei-github.github.io//atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">Hive-split/rlike对特殊字符转义的解决</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2022-05-29 / 3 min read
+        </div>
+        
+        <div class="post-content yue">
+          <h2 id="序">序</h2>
+<p>需要弄清三个解析器：shell的解析(存在转义)，String的解析(存在转义)，split/rlike对最终String解析完后的字符串应用正则匹配(即split/rlike的解析，也存在转义)</p>
+<h2 id="问题">问题</h2>
+<p>在执行hive时split某个字段，或者通过rlike正则匹配后筛选出所需数据时，所写的正则匹配条件一旦实际特殊字符的匹配，会变得异常复杂。</p>
+<pre><code class="language-sql">--例如根据|进行分割时，需要已\\|进行分割
+split('name1|name2|name3', '\\|')
+</code></pre>
+<pre><code class="language-java">//若对于hive不熟悉，可以直接参考Java代码
+String[] str_list = test_strs.split(&quot;\\|&quot;);
+</code></pre>
+</br>
+<h2 id="分析">分析</h2>
+<p>首先split，无论是Hive中(其实Hive就是Java实现的)还是Java中，split接受的都是正则表达式，也就是在split开始运行之前必须拿到合理的正则表达式；|在正则表达式中有特殊含义，所以需要|转义，也就是我们需要把&quot;|&quot;传入正则；那为何会有两个backslash，原因在于，&quot;|&quot;是字符串的形式，而&quot;&quot;在字符串中属于特殊字符，所以要想String解析后得到&quot;|&quot;，那么需要先对&quot;&quot;进行解析，因此为：&quot;\|&quot;。<br>
+总结一下，即String中''对''完成了解析，'|'作为两个正常的字符传入split中，split用对待正则表达式的方式对待'|'，识别到''以后，用其自身的解析器转义'|'，即想匹配普通字符一样匹配'|'。</p>
+<p>至此，第一阶段完成，这是大部分情况下会遇到的问题。</p>
+<p>不妨再深入一些，如果我们在shell中以<code>hive -e &quot;${hql}&quot;</code>的方式执行我们的hive代码，如果仍然沿上述代码会出现问题。原因主要在于在shell中运行会引入shell的解释器，这就意味着&quot;\|&quot;会先经过shell的解释器进行转义，那么当轮到String进行转义时候，这个时候String拿到的东西已经是被转义过得，而不是'\|'了，所以为了保证String仍然可以拿到原始数据，我们需要在添加\来应付shell的转义，即改成'\\|'，如此以后，String仍然可以得偿所愿，拿到'\|'了。</p>
+<p>另，如果以<code>hive -f test.hql</code>的方式在shell中执行，是无须应付shell解释器的转义的情况的，原因在于test.hql在另一个文件中，会直接被hive执行而无须通过shell的“审阅”。</p>
+<p>最后，rlike在这个问题上和split如出一辙，原因是两者都期待输入正则表达式，而正则表达式的输入均需经过String的传递，至于是否引入shell，那就见仁见智了。</p>
+<h2 id="ref">ref</h2>
+<ol>
+<li><em>https://stackoverflow.com/questions/13661433/split-a-string-on-pipe-in-java</em></li>
+</ol>
+
+        </div>
+
+        
+          <a class="animated fadeInUp p-2 items-center text-sm text-gray-700 border hover:bg-gray-300 leading-none rounded-full flex lg:inline-flex m-4 " href="https://yanglei-github.github.io/tag/uMSCLCVOc/">
+            <span class="flex-auto">Hive</span>
+          </a>
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://yanglei-github.github.io/post/tensorflow1x_base_api_tutorial_2/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  TensorFlow1.x教程-常用API详解(2)
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://yanglei-github.github.io/post/tensorflow1x_base_api_tutorial_1/">
+                <h3 class="post-title">
+                  TensorFlow1.x教程-常用API详解(1)
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '5ec6c7c3ebc05ace6049',
+    clientSecret: '3fd97e220f3502c59009a5823360795c96fe7cba',
+    repo: 'yanglei-github.github.io',
+    owner: 'yanglei-github',
+    admin: ['yanglei-github'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+      </div>
+    </div>
+
+    <script src="https://yanglei-github.github.io//media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

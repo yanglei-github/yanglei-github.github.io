@@ -1,0 +1,318 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>YL&#39;s blog</title>
+<meta name="description" content="知易行难" />
+<link rel="shortcut icon" href="https://yanglei-github.github.io//favicon.ico?v=1678521400365">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+
+<link rel="stylesheet" href="https://yanglei-github.github.io//styles/main.css">
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main px-4 flex flex-col lg:flex-row">
+      <div id="sidebar" class="sidebar-wrapper lg:static lg:w-1/4">
+  <div class="lg:sticky top-0">
+    <div class="sidebar-content">
+      <div class="flex lg:block p-4 lg:px-0 items-center fixed lg:static lg:block top-0 right-0 left-0 bg-white z-50">
+        <i class="ri-menu-2-line lg:mt-4 text-2xl cursor-pointer animated fadeIn" onclick="openMenu()"></i>
+        <a href="https://yanglei-github.github.io/">
+          <img class="animated fadeInLeft avatar rounded-lg mx-4 lg:mt-32 lg:mx-0 mt-0 lg:w-24 lg:h-24 w-12 w-12" src="https://yanglei-github.github.io//images/avatar.png?v=1678521400365" alt="">
+        </a>
+        <h1 class="animated fadeInLeft lg:text-4xl font-extrabold lg:mt-8 mt-0 text-xl" style="animation-delay: 0.2s">YL&#39;s blog</h1>
+      </div>
+      
+        <div class="animated fadeInLeft" style="animation-delay: 0.4s">
+          <p class="my-4 text-gray-600 font-light hidden lg:block">
+            文章目录
+          </p>
+          <div class="toc-container hidden lg:block">
+            <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#tfsqueeze">tf.squeeze</a></li>
+<li><a href="#tfones_like-tfzeros_like">tf.ones_like &amp; tf.zeros_like</a></li>
+<li><a href="#tfgreater-tfwhere-tfcond">tf.greater &amp; tf.where &amp; tf.cond</a></li>
+<li><a href="#tfpad">tf.pad</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      
+    </div>
+  </div>
+</div>
+
+<div class="menu-container">
+  <i class="ri-arrow-left-line text-2xl cursor-pointer animated fadeIn close-menu-btn" onclick="closeMenu()"></i>
+  <div>
+    
+      
+        <a href="/" class="menu" style="animation-delay: 0s">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu" style="animation-delay: 0.2s">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu" style="animation-delay: 0.4s">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu" style="animation-delay: 0.6000000000000001s">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="site-footer">
+    <div class="py-4 text-gray-700">Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a></div>
+    <a class="rss" href="https://yanglei-github.github.io//atom.xml" target="_blank">RSS</a>
+  </div>
+</div>
+<div class="mask" onclick="closeMenu()">
+</div>
+      <div class="content-wrapper py-32 lg:p-8 lg:w-3/4 post-detail animated fadeIn">
+        <h1 class="text-3xl font-bold lg:mt-16">TensorFlow1.x教程-常用API详解(1)</h1>
+        <div class="text-sm text-gray-700 lg:my-8">
+          2022-05-01 / 4 min read
+        </div>
+        
+        <div class="post-content yue">
+          <p>本文主要介绍常用API的使用和注意事项，可用作查询工具，当准备使用某些API时进行查询，但前提是大致了解每个API可以实现的功能。以下介绍API的方式为API在直觉上实现的作用，实例demo，同时在注释中给出注意事项。</p>
+<h2 id="tfsqueeze">tf.squeeze</h2>
+<p>将input_tensor中所有1的维度去掉生成output_tensor，如果不想去掉所有1的维度，可以指定axis=[1]表示只压缩掉axis=1的维度，注意axis从0开始</p>
+<pre><code class="language-python">import tensorflow as tf
+# c_list.shape = (3,1,2)
+a_list = tf.constant([[[1,1]],[[2,3]],[[3,3]]]) 
+# c_squ.shape = (3,2), axis=1表示只压缩掉dims=axis=1这个维度
+a_squ = tf.squeeze(a_list, axis=[1], name=&quot;squeeze_a_list&quot;)
+with tf.Session() as sess:
+    print(sess.run(a_squ))
+</code></pre>
+</br>
+<h2 id="tfones_like-tfzeros_like">tf.ones_like &amp; tf.zeros_like</h2>
+<pre><code class="language-python">import tensorflow as tf
+b_list = tf.constant([0.1,0.2,0.3])
+# 返回type和shape和b_list一致但所有元素value均为1的tenosr b_ones, 可以通过dtype修改返回的tensor的数据类型
+b_ones = tf.ones_like(b_list, dtype=tf.float32, name=&quot;ones_op&quot;)
+# 同上，value=0
+b_zeros = tf.zeros_like(b_list, dtype=tf.int32, name=&quot;zeros_op&quot;)
+with tf.Session() as sess:
+    print(sess.run([b_ones, b_zeros]))
+</code></pre>
+</br>
+<h2 id="tfgreater-tfwhere-tfcond">tf.greater &amp; tf.where &amp; tf.cond</h2>
+<p>关于tf.where需要强调的是c_great作为tf.where的condition参数，强烈建议与c_list&amp;base_list的shape一致，其中c_list与base_list的shape必须一致，但是如果condition的rank=1，c_list可以比condition的维度高，但是两者第一个维度必须一致，这个时候tf需自动复制符合要求的多出来的一列。</p>
+<pre><code class="language-python">import tensorflow as tf
+c_list = tf.constant([0.1,0.5,0.6])
+base_list = tf.constant([0.5,0.5,0.5])
+# c_list与base_list中各个对应位置进行比较，如果比base_list中大则返回True反之返回False
+c_great = tf.greater(c_list, base_list)
+# greater通常与tf.where结合使用，例如希望将c_list比base_list中小的位置替换成base_list中对应位置的数
+c_final = tf.where(c_great, c_list, base_list)
+x = tf.constant(1)
+y = tf.constant(2)
+# condition成立时会执行tf.add，否则指定tf.multiply，注意condition后面选择执行的两个函数必须是type相同的lists of tensor
+d_cond = tf.cond(tf.less(x,y), lambda: tf.add(x,y), lambda: tf.multiply(x,y))
+with tf.Session() as sess:
+    print(sess.run([c_great, c_final, d_cond]))
+</code></pre>
+</br>
+<h2 id="tfpad">tf.pad</h2>
+<p>主要描述mode=&quot;CONSTANT&quot;模式，另外两个模式使用场景少，可自主了解<br>
+pad的rank(rank理解：矩阵2x2则rank=2, 矩阵2x2x2则rank=3，即矩阵有多少个不同的dimension就有多少个rank，也可以理解成axis)和要pading的input tensor的rank一致，即pad_conf的rank必须和e_list的rank一致。一致的原因是pad_conf中每个位置的元素对应对每个rank位置的填充方式，默认CONSTANT=0即以0作为填充值，&quot;[[1,3],[2,1]]&quot;表示rank=1维度前面填充1条这个维度的数据，后面填充3条这个维度的数据，rank=1对应二维矩阵中的行，所以相当于对整个矩阵前面添加都是0的一行，后面添加都是0的两行，rank=2前面添加2条该维度数据，后面添加一条该维度数据，即每行中的前两列添加0，每行最后一列添加0。<br>
+此外，rank也等效理解为shape的位置，即<strong>rank-1=shape-1=rank=axis</strong>(注意这里的shape指的是shape中每个维度的位置，实际上应该写为postion(shape)).</p>
+<pre><code class="language-python">import tensorflow as tf
+e_list = tf.constant([[1,2],[3,4]])
+pad_conf = tf.constant([1,3],[2,1])
+e_pad = tf.pad(e_list, pad_conf)
+with tf.Session() as sess:
+    print(sess.run(e_pad))
+</code></pre>
+</br>
+<h2 id="references">References</h2>
+<ol>
+<li>https://www.tensorflow.org/versions/r1.15/api_docs/python/tf/</li>
+</ol>
+
+        </div>
+
+        
+          <a class="animated fadeInUp p-2 items-center text-sm text-gray-700 border hover:bg-gray-300 leading-none rounded-full flex lg:inline-flex m-4 " href="https://yanglei-github.github.io/tag/9cZd0vzxV/">
+            <span class="flex-auto">tensorflow1.x</span>
+          </a>
+        
+
+
+        <div class="flex justify-between py-8">
+          
+            <div class="prev-post">
+              <a href="https://yanglei-github.github.io/post/hive-split_rlike_tutor/">
+                <h3 class="post-title">
+                  <i class="ri-arrow-left-line"></i>
+                  Hive-split/rlike对特殊字符转义的解决
+                </h3>
+              </a>
+            </div>
+          
+
+          
+            <div class="next-post">
+              <a href="https://yanglei-github.github.io/post/tensorflow_tutorial/">
+                <h3 class="post-title">
+                  TensorFlow 1.x教程-基础概念
+                  <i class="ri-arrow-right-line"></i>
+                </h3>
+              </a>
+            </div>
+          
+        </div>
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '5ec6c7c3ebc05ace6049',
+    clientSecret: '3fd97e220f3502c59009a5823360795c96fe7cba',
+    repo: 'yanglei-github.github.io',
+    owner: 'yanglei-github',
+    admin: ['yanglei-github'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+      </div>
+    </div>
+
+    <script src="https://yanglei-github.github.io//media/prism.js"></script>  
+<script>
+
+Prism.highlightAll()
+let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+// This should probably be throttled.
+// Especially because it triggers during smooth scrolling.
+// https://lodash.com/docs/4.17.10#throttle
+// You could do like...
+// window.addEventListener("scroll", () => {
+//    _.throttle(doThatStuff, 100);
+// });
+// Only not doing it here to keep this Pen dependency-free.
+
+window.addEventListener("scroll", event => {
+  let fromTop = window.scrollY;
+
+  mainNavLinks.forEach((link, index) => {
+    let section = document.getElementById(decodeURI(link.hash).substring(1));
+    let nextSection = null
+    if (mainNavLinks[index + 1]) {
+      nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+    }
+    if (section.offsetTop <= fromTop) {
+      if (nextSection) {
+        if (nextSection.offsetTop > fromTop) {
+          link.classList.add("current");
+        } else {
+          link.classList.remove("current");    
+        }
+      } else {
+        link.classList.add("current");
+      }
+    } else {
+      link.classList.remove("current");
+    }
+  });
+});
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  var lazyImages = [].slice.call(document.querySelectorAll(".post-feature-image.lazy"));
+
+  if ("IntersectionObserver" in window) {
+    let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          let lazyImage = entry.target
+          lazyImage.style.backgroundImage = `url(${lazyImage.dataset.bg})`
+          lazyImage.classList.remove("lazy")
+          lazyImageObserver.unobserve(lazyImage)
+        }
+      });
+    });
+
+    lazyImages.forEach(function(lazyImage) {
+      lazyImageObserver.observe(lazyImage)
+    })
+  } else {
+    // Possibly fall back to a more compatible method here
+  }
+});
+
+const menuContainer = document.querySelector('.menu-container')
+const menus = document.querySelectorAll('.menu-container .menu')
+const mask = document.querySelector('.mask')
+const contentWrapper = document.querySelector('.content-wrapper')
+const latestArticle = document.querySelector('.latest-article')
+const readMore = document.querySelector('.read-more')
+const indexPage = document.querySelector('.index-page')
+
+const isHome = location.pathname === '/'
+if (latestArticle) {
+  latestArticle.style.display = isHome ? 'block' : 'none'
+  readMore.style.display = isHome ? 'block' : 'none'
+  indexPage.style.display = isHome ? 'none' : 'block'
+}
+
+const openMenu = () => {
+  menuContainer.classList.add('open')
+  menus.forEach(menu => {
+    menu.classList.add('animated', 'fadeInLeft')
+  })
+  mask.classList.add('open')
+  contentWrapper.classList.add('is-second')
+}
+
+const closeMenu = () => {
+  menuContainer.classList.remove('open')
+  menus.forEach(menu => {
+    menu.classList.remove('animated', 'fadeInLeft')
+  })
+  mask.classList.remove('open')
+  contentWrapper.classList.remove('is-second')
+}
+</script>
+  
+  </body>
+</html>

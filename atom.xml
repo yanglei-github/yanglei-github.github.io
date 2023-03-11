@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://yanglei-github.github.io/</id>
+    <title>YL&apos;s blog</title>
+    <updated>2023-03-11T07:57:17.573Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://yanglei-github.github.io/"/>
+    <link rel="self" href="https://yanglei-github.github.io/atom.xml"/>
+    <subtitle>知易行难</subtitle>
+    <logo>https://yanglei-github.github.io/images/avatar.png</logo>
+    <icon>https://yanglei-github.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2023, YL&apos;s blog</rights>
+    <entry>
+        <title type="html"><![CDATA[Hive-内部表与外部表]]></title>
+        <id>https://yanglei-github.github.io/post/hive-internal_external_tbl/</id>
+        <link href="https://yanglei-github.github.io/post/hive-internal_external_tbl/">
+        </link>
+        <updated>2023-01-12T04:49:34.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="分析">分析</h2>
+<p>如果不指定创建外部表，那么默认创建内部表。<br>
+如果删除内部表的分区，表location中指向的数据也会被删除，即原始数据会被删除<br>
+如果删除外部表的分区，则只会删除表分区中的数据，表location位置对应的表分区数据不会删除，即安全性更高</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Hive-Array相关]]></title>
+        <id>https://yanglei-github.github.io/post/hive-array_qa/</id>
+        <link href="https://yanglei-github.github.io/post/hive-array_qa/">
+        </link>
+        <updated>2023-01-12T04:44:22.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="注意事项">注意事项</h2>
+<p>1.<code>where array_contains(f1, '0')</code>可以筛选出某个array field中是否含有'0'元素，即字符串形式的0<br>
+2.collect_set()执行后生成的是array类型，如果一开始初始化的字段是string类型，此时array类型不能直接写入string类型的字段中，需要用to_json命令将array存储成json后存入string类型的字段中。更深入一点，后续将该hql跑出来的结果进行解析时候，需要用eval()命令将string类型解析成对应的list或者dict类型</p>
+<p><strong>关于python中json的不同类型的读取</strong><br>
+读取json格式文件时，<br>
+若当时是用字符串类型直接存储的json格式数据，那么需要先从文件中读取出字符串，再用json.loads(str_json)来读出dict的类型；</p>
+<pre><code class="language-python">import sys
+import json
+if __name__ == &quot;__main__&quot;:
+    file = sys.argv[1]
+    with open(file, 'r') as fp:
+        for line in fp:
+            json_data = json.loads(line)
+    print(json_data, type(json_data))
+</code></pre>
+<p>若当时通过json.dump存储的，则可以直接用json.load(file_name)取读取存储json数据的文件；</p>
+<p>note:<br>
+pycharm中直接创建的.json文件属于以字符串形式存储的json，因此不能直接用json.load取load这个文件。</p>
+<p>3.concat命令只能拼接hive本身有的类型的数据，因此array无法拼接，需要先用to_json转换成string后进行拼接</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Hive-transform]]></title>
+        <id>https://yanglei-github.github.io/post/hive-transform/</id>
+        <link href="https://yanglei-github.github.io/post/hive-transform/">
+        </link>
+        <updated>2023-01-12T04:18:03.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="序">序</h2>
+<p>当简单的sql语句，或者复杂的sql函数无法满足要求时候，可通过transform引入可执行脚本，比如python脚本来自定义的处理每一条数据，相同于通过第三方脚本实现了udf功能。</p>
+<h2 id="分析">分析</h2>
+<p>python脚本的输入输出及注意事项如下</p>
+<pre><code class="language-python">while 1:
+    line = sys.stdin.readline()
+    # 注意此处必须添加终止条件，即没有数据后跳出while，否则会无限循环
+    if len(line) == 0:
+        break
+    # 读入数据包含\n换行符，注意strip掉
+    parsed_line = line.strip('\n')
+    sys.stdout.write('{}\n'.format(parsed_line))
+</code></pre>
+<h2 id="note">note</h2>
+<p>transform的输入输出均由\t分隔</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Hive-减少join操作的利器：row_number()]]></title>
+        <id>https://yanglei-github.github.io/post/hive-row_number_func/</id>
+        <link href="https://yanglei-github.github.io/post/hive-row_number_func/">
+        </link>
+        <updated>2023-01-12T03:53:28.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="序">序</h2>
+<p>背景如下，表中有三个字段，设备号f1(有重复)，设备对应的动作信息f2，动作发生时间戳f3，此时我们希望取出相同f1中最近一次时间戳发生的动作。<br>
+正常思路是先按时间降序去重f1，之后通过f1和f3去和自己join出对应的f2，此时通过row_number()可以避免join操作。</p>
+<h2 id="分析">分析</h2>
+<p>具体实现方式如下</p>
+<pre><code class="language-sql">select f1, f2
+from 
+(
+    select f1,
+             f2,
+             row_number() over(
+                 --此处对每个设备内多次动作进行时间降序排列，并编号
+                 partition by f1
+                 order by 
+                        f3 desc
+             ) as number
+    from
+            test_tbl
+) tmp
+where
+    --取出时间最近的一次
+    tmp.number = 1
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Hive-天及小时级分区表跨天跨小时查询方式]]></title>
+        <id>https://yanglei-github.github.io/post/hive-select_dt_hour_partition/</id>
+        <link href="https://yanglei-github.github.io/post/hive-select_dt_hour_partition/">
+        </link>
+        <updated>2023-01-11T05:34:49.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="序">序</h2>
+<p>对于分天分小时的分区表，若想取昨天16点到今天8点的数据，直接通过where限制小时无法实现</p>
+<h2 id="问题">问题</h2>
+<p>以下方法无法成功截取我们想要的时间段内的数据</p>
+<pre><code class="language-sql">select *
+from dt_hour_tbl
+where (dt='20230110' and hour&gt;'16') or (dt='20230111' and hour&lt;'08')
+</code></pre>
+<h2 id="分析">分析</h2>
+<p>如果只有hour和dt字段，那么可以通过拼接来实现，不过这样在select时候会扫描全表，不会首先取出分区，因此消耗的时间与资源会大大增加</p>
+<pre><code class="language-sql">select *
+from dt_hour_tbl
+where unix_timestamp(concat(dt,hour),'yyyyMMddHH') &gt;= unix_timestamp(concat('20230110','16'),'yyyyMMddHH') 
+        and unix_timestamp(concat(dt,hour),'yyyyMMddHH') &lt;= unix_timestamp(concat('20230111','08'),'yyyyMMddHH')
+</code></pre>
+<br>
+如果有类似timestamp的字段可以直接用timestamp进行截取；如果资源与时间有较多顾虑，可以考虑分天跑数后合并结果
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[TensorFlow1.x教程-常用API详解(3)]]></title>
+        <id>https://yanglei-github.github.io/post/tensorflow1x_base_api_tutorial_3/</id>
+        <link href="https://yanglei-github.github.io/post/tensorflow1x_base_api_tutorial_3/">
+        </link>
+        <updated>2022-06-19T08:45:41.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="tfcontriblookupindex_table_from_tensor">tf.contrib.lookup.index_table_from_tensor</h2>
+<p>承接上文，除了对各种维度tensor的处理，tf还可以完成建表操作，通过建表和查表的APIs，tf可以实现根据tensor中的每一个value在表中查出他们对应的index，好处在于可以将不同规格的value统一存成index，相当于构造了value:index的字典，既统一了value的规格，又方便查询，还可以统一处理异常值。</p>
+<pre><code class="language-python"># default_value表示value若不在表中时默认返回的index值
+# 须注意建表时每个value必须属于相同类型，如果类型不同会报错
+value_tbl = tf.contrib.lookup.index_table_from_tensor(tf.constant(['exception','1','2','3']), default_value=0)
+# 可以在表中同时查多个值返回每个值建表时对应的index(从0开始)，注意test不在表中故返回default_value即0
+idxs = value_tbl.lookup(tf.constant(['exception','1','2','3','test']))
+with tf.Session() as sess:
+    # 若涉及建表，创建会话时需要先对表进行初始化
+    sess.run(tf.tables_initializer())
+    print(sess.run(idxs))
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[TensorFlow1.x教程-常用API详解(2)]]></title>
+        <id>https://yanglei-github.github.io/post/tensorflow1x_base_api_tutorial_2/</id>
+        <link href="https://yanglei-github.github.io/post/tensorflow1x_base_api_tutorial_2/">
+        </link>
+        <updated>2022-06-18T01:22:55.000Z</updated>
+        <content type="html"><![CDATA[<p>随着TF APIs的深入，笔者必须要强调dimension, axis, rank, shape这几个的关联。只需铭记<strong>dimension(从0开始)=axis(从0开始，可类比Numpy)=rank-1(rank即矩阵的秩，从1开始)=shape-1(shape指的是shape中每个维度shape的位置，从1开始)</strong></p>
+<h2 id="tfexpand_dims">tf.expand_dims</h2>
+<p>在指定的dimension或者说axis上嵌入一个维度；根据下述demo，我们可以得到几个结论，第一点是axis从0开始；第二点是axis指的是在其对应的axis/dimensions上插入一个维度(其实就是插入一个中括号)，根据前文，axis=shape-1，所以axis=0时候我们需要在shape=axis+1=1，也就是shape的第一个位置插入维度1，故(2,2)变成了(1,2,2)；以此类推，axis的不同会在不同shape的位置上插入1个维度，表现在shape里就是第axis+1个元素插入1。</p>
+<pre><code class="language-python">import tensorflow as tf
+#const1.shape=(2,2)
+const1 = tf.constant([[1,2],[3,4]], name=&quot;const_expand_dims&quot;)
+#const1_new0.shape=(1,2,2)
+const1_new0 = tf.expand_dims(const1, axis=0)
+#const1_new1.shape=(2,1,2)
+const1_new1 = tf.expand_dims(const1, axis=1)
+#const1_new2.shape=(2,2,1)
+const1_new2 = tf.expand_dims(const1, axis=2)
+with tf.Session() as sess:
+    sess.run([const1_new0, const1_new1, const1_new2])
+</code></pre>
+</br>
+<h2 id="tftile">tf.tile</h2>
+<p>如果诸位不需要padding，而是有规律的复制某个维度，或者某几个维度的数值，那么tile就是不二之选，即tile可以根据指定维度复制指定次数该维度的元素值。<br>
+如下所述，计算const2_new0时候我们指定multiples=[1,2]，这里的1，2可以理解为shape的位置(再次重申，shape位置从1开始；此处切勿与axis搞混，因为不少其他API其实都是传的axis)，故multiples指postion(shape) = 1时，在这个维度复制1次(复制一次相当于保持不变，即复制自身一次还是自身)，postion(shape) = 2时将该维度复制2次，相当于在原有基础上进行double，因此<code>const2_new0 = [[0,1,2,0,1,2],[3,4,5,3,4,5]]</code><br>
+更容易的理解方式，原shape=(a,b)，tile中multiples指定为[m,n]，那么修改后的shape=(a*m,n*b)</p>
+<pre><code class="language-python">import tensorflow as tf
+const2 = tf.constant([[0,1,2],[3,4,5]], name=&quot;const_tile&quot;)
+#const2_new0 = [[0,1,2,0,1,2],[3,4,5,3,4,5]]
+const2_new0 = tf.tile(const2, multiples=[1,2])
+#const2_new1 = [[0,1,2],[3,4,5],[0,1,2],[3,4,5]]，须注意此时相当于pos(shape)=1时候的全部数据作为完整的样本进行复制，即[0,1,2],[3,4,5]这两行作为一个整体完成一次复制
+const2_new1 = tf.tile(const2, multiples=[2,1])
+with tf.Session() as sess:
+    sess.run([const2_new0, const2_new1])
+</code></pre>
+</br>
+<h2 id="tfreshape">tf.reshape</h2>
+<p>不妨将tf.tile中的const2_new1(shape=(2*2,3*1)=(4,3))变成最后一个维度为6(<strong>显然，最后一个维度一定要可以被所有元素个数整除，否则无法重新reshape维度</strong>)，这是我们只需要指定最后一个维度，也是就是shape中的最后一个位置为6，前面用-1表示即可，-1表示该维度具体数值笔者不关系。</p>
+<pre><code class="language-python">import tensorflow as tf
+#shape中小括号和中括号均可；const2_fin1.shape=(2,6)
+#const2_fin1 = tf.reshape(const2_new1, shape=(-1, 6))
+const2_fin1 = tf.reshape(const2_new1, shape=[-1, 6])
+with tf.Session() as sess:
+    sess.run(const2_fin1)
+</code></pre>
+</br>
+<h2 id="tfconcat">tf.concat</h2>
+<p>注意concat传入的是axis，即需要指定axis/dimensions进行合并</p>
+<pre><code class="language-python">import tensorflow as tf
+const3 = tf.constant([[0,1,2],[3,4,5]], name=&quot;const_concat1&quot;)
+const4 = tf.constant([[6,7,8],[9,10,11]], name=&quot;const_concat2&quot;)
+#根据axis=0即postion(shape)=1进行合并，相当于把两个常量的所有行纵向stack到一起
+#const3_fin.shape=(4,3)
+const3_fin = tf.concat([const3, const4], axis=0)
+#根据axis=1即postion(shape)=2进行合并，相当于把两个常量的所有列横向stack到一起
+#const4_fin.shape=(2,6)
+const4_fin = tf.concat([const3, const4], axis=1)
+with tf.Session() as sess:
+    sess.run([const3_fin, const4_fin])
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Hive-split/rlike对特殊字符转义的解决]]></title>
+        <id>https://yanglei-github.github.io/post/hive-split_rlike_tutor/</id>
+        <link href="https://yanglei-github.github.io/post/hive-split_rlike_tutor/">
+        </link>
+        <updated>2022-05-29T09:16:07.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="序">序</h2>
+<p>需要弄清三个解析器：shell的解析(存在转义)，String的解析(存在转义)，split/rlike对最终String解析完后的字符串应用正则匹配(即split/rlike的解析，也存在转义)</p>
+<h2 id="问题">问题</h2>
+<p>在执行hive时split某个字段，或者通过rlike正则匹配后筛选出所需数据时，所写的正则匹配条件一旦实际特殊字符的匹配，会变得异常复杂。</p>
+<pre><code class="language-sql">--例如根据|进行分割时，需要已\\|进行分割
+split('name1|name2|name3', '\\|')
+</code></pre>
+<pre><code class="language-java">//若对于hive不熟悉，可以直接参考Java代码
+String[] str_list = test_strs.split(&quot;\\|&quot;);
+</code></pre>
+</br>
+<h2 id="分析">分析</h2>
+<p>首先split，无论是Hive中(其实Hive就是Java实现的)还是Java中，split接受的都是正则表达式，也就是在split开始运行之前必须拿到合理的正则表达式；|在正则表达式中有特殊含义，所以需要|转义，也就是我们需要把&quot;|&quot;传入正则；那为何会有两个backslash，原因在于，&quot;|&quot;是字符串的形式，而&quot;&quot;在字符串中属于特殊字符，所以要想String解析后得到&quot;|&quot;，那么需要先对&quot;&quot;进行解析，因此为：&quot;\|&quot;。<br>
+总结一下，即String中''对''完成了解析，'|'作为两个正常的字符传入split中，split用对待正则表达式的方式对待'|'，识别到''以后，用其自身的解析器转义'|'，即想匹配普通字符一样匹配'|'。</p>
+<p>至此，第一阶段完成，这是大部分情况下会遇到的问题。</p>
+<p>不妨再深入一些，如果我们在shell中以<code>hive -e &quot;${hql}&quot;</code>的方式执行我们的hive代码，如果仍然沿上述代码会出现问题。原因主要在于在shell中运行会引入shell的解释器，这就意味着&quot;\|&quot;会先经过shell的解释器进行转义，那么当轮到String进行转义时候，这个时候String拿到的东西已经是被转义过得，而不是'\|'了，所以为了保证String仍然可以拿到原始数据，我们需要在添加\来应付shell的转义，即改成'\\|'，如此以后，String仍然可以得偿所愿，拿到'\|'了。</p>
+<p>另，如果以<code>hive -f test.hql</code>的方式在shell中执行，是无须应付shell解释器的转义的情况的，原因在于test.hql在另一个文件中，会直接被hive执行而无须通过shell的“审阅”。</p>
+<p>最后，rlike在这个问题上和split如出一辙，原因是两者都期待输入正则表达式，而正则表达式的输入均需经过String的传递，至于是否引入shell，那就见仁见智了。</p>
+<h2 id="ref">ref</h2>
+<ol>
+<li><em>https://stackoverflow.com/questions/13661433/split-a-string-on-pipe-in-java</em></li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[TensorFlow1.x教程-常用API详解(1)]]></title>
+        <id>https://yanglei-github.github.io/post/tensorflow1x_base_api_tutorial_1/</id>
+        <link href="https://yanglei-github.github.io/post/tensorflow1x_base_api_tutorial_1/">
+        </link>
+        <updated>2022-05-01T01:26:54.000Z</updated>
+        <content type="html"><![CDATA[<p>本文主要介绍常用API的使用和注意事项，可用作查询工具，当准备使用某些API时进行查询，但前提是大致了解每个API可以实现的功能。以下介绍API的方式为API在直觉上实现的作用，实例demo，同时在注释中给出注意事项。</p>
+<h2 id="tfsqueeze">tf.squeeze</h2>
+<p>将input_tensor中所有1的维度去掉生成output_tensor，如果不想去掉所有1的维度，可以指定axis=[1]表示只压缩掉axis=1的维度，注意axis从0开始</p>
+<pre><code class="language-python">import tensorflow as tf
+# c_list.shape = (3,1,2)
+a_list = tf.constant([[[1,1]],[[2,3]],[[3,3]]]) 
+# c_squ.shape = (3,2), axis=1表示只压缩掉dims=axis=1这个维度
+a_squ = tf.squeeze(a_list, axis=[1], name=&quot;squeeze_a_list&quot;)
+with tf.Session() as sess:
+    print(sess.run(a_squ))
+</code></pre>
+</br>
+<h2 id="tfones_like-tfzeros_like">tf.ones_like &amp; tf.zeros_like</h2>
+<pre><code class="language-python">import tensorflow as tf
+b_list = tf.constant([0.1,0.2,0.3])
+# 返回type和shape和b_list一致但所有元素value均为1的tenosr b_ones, 可以通过dtype修改返回的tensor的数据类型
+b_ones = tf.ones_like(b_list, dtype=tf.float32, name=&quot;ones_op&quot;)
+# 同上，value=0
+b_zeros = tf.zeros_like(b_list, dtype=tf.int32, name=&quot;zeros_op&quot;)
+with tf.Session() as sess:
+    print(sess.run([b_ones, b_zeros]))
+</code></pre>
+</br>
+<h2 id="tfgreater-tfwhere-tfcond">tf.greater &amp; tf.where &amp; tf.cond</h2>
+<p>关于tf.where需要强调的是c_great作为tf.where的condition参数，强烈建议与c_list&amp;base_list的shape一致，其中c_list与base_list的shape必须一致，但是如果condition的rank=1，c_list可以比condition的维度高，但是两者第一个维度必须一致，这个时候tf需自动复制符合要求的多出来的一列。</p>
+<pre><code class="language-python">import tensorflow as tf
+c_list = tf.constant([0.1,0.5,0.6])
+base_list = tf.constant([0.5,0.5,0.5])
+# c_list与base_list中各个对应位置进行比较，如果比base_list中大则返回True反之返回False
+c_great = tf.greater(c_list, base_list)
+# greater通常与tf.where结合使用，例如希望将c_list比base_list中小的位置替换成base_list中对应位置的数
+c_final = tf.where(c_great, c_list, base_list)
+x = tf.constant(1)
+y = tf.constant(2)
+# condition成立时会执行tf.add，否则指定tf.multiply，注意condition后面选择执行的两个函数必须是type相同的lists of tensor
+d_cond = tf.cond(tf.less(x,y), lambda: tf.add(x,y), lambda: tf.multiply(x,y))
+with tf.Session() as sess:
+    print(sess.run([c_great, c_final, d_cond]))
+</code></pre>
+</br>
+<h2 id="tfpad">tf.pad</h2>
+<p>主要描述mode=&quot;CONSTANT&quot;模式，另外两个模式使用场景少，可自主了解<br>
+pad的rank(rank理解：矩阵2x2则rank=2, 矩阵2x2x2则rank=3，即矩阵有多少个不同的dimension就有多少个rank，也可以理解成axis)和要pading的input tensor的rank一致，即pad_conf的rank必须和e_list的rank一致。一致的原因是pad_conf中每个位置的元素对应对每个rank位置的填充方式，默认CONSTANT=0即以0作为填充值，&quot;[[1,3],[2,1]]&quot;表示rank=1维度前面填充1条这个维度的数据，后面填充3条这个维度的数据，rank=1对应二维矩阵中的行，所以相当于对整个矩阵前面添加都是0的一行，后面添加都是0的两行，rank=2前面添加2条该维度数据，后面添加一条该维度数据，即每行中的前两列添加0，每行最后一列添加0。<br>
+此外，rank也等效理解为shape的位置，即<strong>rank-1=shape-1=rank=axis</strong>(注意这里的shape指的是shape中每个维度的位置，实际上应该写为postion(shape)).</p>
+<pre><code class="language-python">import tensorflow as tf
+e_list = tf.constant([[1,2],[3,4]])
+pad_conf = tf.constant([1,3],[2,1])
+e_pad = tf.pad(e_list, pad_conf)
+with tf.Session() as sess:
+    print(sess.run(e_pad))
+</code></pre>
+</br>
+<h2 id="references">References</h2>
+<ol>
+<li>https://www.tensorflow.org/versions/r1.15/api_docs/python/tf/</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[TensorFlow 1.x教程-基础概念]]></title>
+        <id>https://yanglei-github.github.io/post/tensorflow_tutorial/</id>
+        <link href="https://yanglei-github.github.io/post/tensorflow_tutorial/">
+        </link>
+        <updated>2022-04-30T06:15:10.000Z</updated>
+        <summary type="html"><![CDATA[<p>本教程旨在提升读者对TF1.x(1.12+)的重要概念与理念的理解，对重要API的使用，以及debug能力，主要方式为先给出代码，再通过代码进行尽可能详尽的解释，闲言少叙，以下是本文内容，主要搭建可运行的TF流程并给出个人理解，如有谬误，烦请指正。</p>
+<h2 id="基础">基础</h2>
+<p>TF1.x代码的编写主要分为两部分construction phase(即图的构建阶段)+execution phase(即图的执行阶段)，前者定义图中的各个nodes(source ops nodes(即常量和变量nodes，无input) + ops nodes(即各种运算nodes))，后者将真实数据灌入图中进行真实计算；也就是construction phase只定义架构(即使是变量的初始化也不在这步进行)，execution phase根据真实数据进行计算，类似于“懒加载”（仅为概念上的类比）。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>本教程旨在提升读者对TF1.x(1.12+)的重要概念与理念的理解，对重要API的使用，以及debug能力，主要方式为先给出代码，再通过代码进行尽可能详尽的解释，闲言少叙，以下是本文内容，主要搭建可运行的TF流程并给出个人理解，如有谬误，烦请指正。</p>
+<h2 id="基础">基础</h2>
+<p>TF1.x代码的编写主要分为两部分construction phase(即图的构建阶段)+execution phase(即图的执行阶段)，前者定义图中的各个nodes(source ops nodes(即常量和变量nodes，无input) + ops nodes(即各种运算nodes))，后者将真实数据灌入图中进行真实计算；也就是construction phase只定义架构(即使是变量的初始化也不在这步进行)，execution phase根据真实数据进行计算，类似于“懒加载”（仅为概念上的类比）。</p>
+<!-- more -->
+<h3 id="example-1-典型的tf两阶段">Example 1. 典型的TF两阶段</h3>
+<pre><code class="language-python">import tensorflow as tf
+# graph construction phase
+var1 = tf.Variable(1, name=&quot;var1&quot;)
+var2 = tf.Variable(2, name=&quot;var2&quot;)
+var3 = var1 + var2
+# 注意此处constant小写开头
+const1 = tf.constant(3, name=&quot;const1&quot;)
+res = var3+const1
+res1 = var3+const1
+''' 注意init仍然位于construction phase中，因此此时没有初始化所有变量，
+    而仅仅是在图中创建了一个可以初始化所有变量的nodes，等到sess.run(init)时候进行真正的初始化
+'''
+init = tf.global_variables_initializer()
+# graph execution phase in a running session
+with tf.Session() as sess:
+    sess.run(init)
+    '''[]的作用：如果单独运行两侧sess.run(res),sess.run(res1),每次TF都会从头开始计算,
+      比如要计算res，需要先计算var3，等到计算res1的时候，TF仍然会重新计算var3，然后再计算res1，
+      此处加[]符号可以在执行多个运算时可以避免重复计算；每次sess.run运行一次图的时候，
+      只有variable values可以被不会被忘记（不会被忘记的原因是，变量值是有sess携带的，
+      只要仍然在sess上下文中，变量数据永远不会丢，
+      更好理解的是其实sess的目的就是为了优化各种变量值(模型需要学习的参数，eg. weights)，
+      如果变量值丢了那就没有优化的意义了），
+      其他所有nodes的value不管前一次sess.run怎么执行的，都会被丢掉（可参看引用1），
+      这也解释了为什么执行两次sess.run时候所有var3会被重新计算，
+      因为第二次时候，第一次var3的值已经被丢弃了'''
+    print(sess.run([res,res1]))
+    # 与上行等价
+    real_res = res.eval()
+print(real_res)
+</code></pre>
+</br>
+<h3 id="example-2-图的概念">Example 2. 图的概念</h3>
+<pre><code class="language-python">import tensorflow as tf
+'''var4在图中是一个变量的source op node，
+   如果我们在构建该node过程中没有指定它属于的图，那么会自动被归属于default_graph
+'''
+var4 = tf.Variable(4, name=&quot;var4&quot;)
+print(var4.graph is tf.get_default_graph())
+# 以下为自定义的图
+customized_graph = tf.Graph()
+with customized_graph.as_default():
+    var5 = tf.Variable(5, name=&quot;var5&quot;)
+    print(var 5 is tf.get_default_graph())
+</code></pre>
+</br>
+<h2 id="reference">Reference</h2>
+<p>1.Hands-On Machine Learning with Scikit-Learn &amp; TensorFlow</p>
+]]></content>
+    </entry>
+</feed>
